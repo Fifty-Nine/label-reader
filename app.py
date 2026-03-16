@@ -49,14 +49,24 @@ async def process_image(request: Request, file: UploadFile = File(...)):
     if not OLLAMA_URL:
         logger.error("OLLAMA_URL is not configured.")
         return templates.TemplateResponse("index.html", {
-            "request": request,
+            "request": request, 
             "error": "OLLAMA_URL is not configured. Please set it as an environment variable."
         })
+
+    logger.info(f"Received file: {file.filename}, size: {file.size if hasattr(file, 'size') else 'unknown'}")
+
     try:
         # Read file and encode to base64
         contents = await file.read()
-        base64_image = base64.b64encode(contents).decode('utf-8')
+        logger.info(f"Read {len(contents)} bytes from uploaded file.")
 
+        if len(contents) == 0:
+            return templates.TemplateResponse("index.html", {
+                "request": request,
+                "error": "The uploaded file is empty."
+            })
+
+        base64_image = base64.b64encode(contents).decode('utf-8')
         # Prepare payload for Ollama
         payload = {
             "model": MODEL_NAME,

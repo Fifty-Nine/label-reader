@@ -10,22 +10,50 @@
         .container { max-width: 800px; margin-top: 50px; }
         .card { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .loading { display: none; }
+        #camera-preview { width: 100%; max-height: 400px; background: #000; border-radius: 10px; display: none; margin-bottom: 15px; }
+        .nav-tabs { border-bottom: none; margin-bottom: 20px; }
+        .nav-link { cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="main-container">
         <div class="card p-4 mb-4">
             <h2 class="text-center mb-4">Inventory Label Reader</h2>
-            <form id="uploadForm" action="/process" method="post" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="file" class="form-label">Upload Label Image (JPG)</label>
-                    <input class="form-control" type="file" id="file" name="file" accept=".jpg,.jpeg" required>
+
+            <ul class="nav nav-tabs nav-fill" id="sourceTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="upload-tab" data-bs-toggle="tab" href="#upload-sec">Upload File</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="camera-tab" data-bs-toggle="tab" href="#camera-sec">Take Photo</a>
+                </li>
+            </ul>
+
+            <div class="tab-content mt-3">
+                <!-- Upload Section -->
+                <div class="tab-pane fade show active" id="upload-sec">
+                    <form id="uploadForm" action="/process" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select Label Image (JPG)</label>
+                            <input class="form-control" type="file" id="file" name="file" accept=".jpg,.jpeg" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">Process Upload</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary" id="submitBtn">Process Image</button>
+
+                <!-- Camera Section -->
+                <div class="tab-pane fade" id="camera-sec">
+                    <video id="camera-preview" autoplay playsinline></video>
+                    <canvas id="capture-canvas" style="display:none;"></canvas>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" id="startCameraBtn">Start Camera</button>
+                        <button type="button" class="btn btn-success" id="captureBtn" style="display:none;">Capture & Process</button>
+                    </div>
                 </div>
-            </form>
-            
+            </div>
+
             <div id="loading" class="text-center mt-4 loading">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
@@ -41,7 +69,7 @@
         {% endif %}
 
         {% if results %}
-        <div class="card p-4">
+        <div class="card p-4" id="results-card">
             <h4 class="mb-3">Extracted Inventory</h4>
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -65,11 +93,109 @@
         {% endif %}
     </div>
 
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        document.getElementById('uploadForm').onsubmit = function() {
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('loading').style.display = 'block';
-        };
+        function initApp() {
+            const uploadForm = document.getElementById('uploadForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const video = document.getElementById('camera-preview');
+            const canvas = document.getElementById('capture-canvas');
+            const startCameraBtn = document.getElementById('startCameraBtn');
+            const captureBtn = document.getElementById('captureBtn');
+            let stream = null;
+
+            if (uploadForm) {
+                uploadForm.onsubmit = function() {
+                    submitBtn.disabled = true;
+                    loading.style.display = 'block';
+                };
+            }
+
+            if (startCameraBtn) {
+                startCameraBtn.onclick = async function() {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: 'environment' }
+                        });
+                        video.srcObject = stream;
+                        video.style.display = 'block';
+                        startCameraBtn.style.display = 'none';
+                        captureBtn.style.display = 'block';
+                    } catch (err) {
+                        alert('Could not access camera: ' + err.message);
+                    }
+                };
+            }
+
+            if (captureBtn) {
+                captureBtn.onclick = async function() {
+                    // Use actual video dimensions
+                    const width = video.videoWidth;
+                    const height = video.videoHeight;
+                    
+                    if (width === 0 || height === 0) {
+                        alert("Camera not ready. Please wait a moment.");
+                        return;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, width, height);
+
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    video.style.display = 'none';
+                    captureBtn.style.display = 'none';
+                    loading.style.display = 'block';
+
+                    canvas.toBlob(async (blob) => {
+                        if (!blob || blob.size === 0) {
+                            alert('Error: Captured image is empty.');
+                            loading.style.display = 'none';
+                            initApp(); // Reset
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append('file', blob, 'capture.jpg');
+
+                        try {
+                            const response = await fetch('/process', {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            const html = await response.text();
+                            const parser = new DOMParser();
+                            const newDoc = parser.parseFromString(html, 'text/html');
+
+                            // Update the main container
+                            document.getElementById('main-container').innerHTML = newDoc.getElementById('main-container').innerHTML;
+
+                            // Re-initialize scripts for the new elements
+                            initApp();
+
+                            // If we were on the camera tab, switch back to it so the user sees consistency
+                            const cameraTab = new bootstrap.Tab(document.getElementById('camera-tab'));
+                            cameraTab.show();
+
+                        } catch (err) {
+                            alert('Error processing image: ' + err);
+                            loading.style.display = 'none';
+                        }
+                    }, 'image/jpeg', 0.9);
+                };
+            }
+        }
+
+        // Initial call
+        initApp();
     </script>
+
 </body>
 </html>
