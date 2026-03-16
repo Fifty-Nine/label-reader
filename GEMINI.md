@@ -17,23 +17,20 @@ codebase, automated testing, etc.
 
 You should use a virtualenv at .venv/ for installing python development tools like
 poetry as you are running in a sandboxed environment that does not allow write access
-outside of your working directory. Because of this restricted sandbox, many development tools will fail if they attempt to write to their default global cache or configuration directories (e.g. `~/.cache`, `~/.config`). You must configure them to use local directories within your workspace. 
+outside of your working directory. Because of this restricted sandbox, many development tools will fail if they attempt to write to their default global cache or configuration directories (e.g. `~/.cache`, `~/.config`). You must configure them to use local directories within your workspace. These should be stored in
+a top-level '$(pwd)/.cache/ directory.
 
 For example, when using `poetry`, set the following environment variables:
 ```bash
-export POETRY_CONFIG_DIR=$(pwd)/.poetry_config
-export POETRY_CACHE_DIR=$(pwd)/.poetry_cache
+export POETRY_CONFIG_DIR=$(pwd)/.cache/poetry/config
+export POETRY_CACHE_DIR=$(pwd)/.cache/poetry/cache
 export POETRY_VIRTUALENVS_IN_PROJECT=true
 ```
 
 When using `pre-commit`, configure it to use a local cache directory before running or installing hooks:
 ```bash
-export PRE_COMMIT_HOME=$(pwd)/.pre-commit-cache
+export PRE_COMMIT_HOME=$(pwd)/.cache/pre-commit
 ```
-
-TODO.md contains a breakdown of the tasks involved in the upcoming development.
-You should keep it up-to-date with the latest state of development as you work
-through it.
 
 Please proceed with the first unfinished item from TODO.md. When you have finished,
 present your changes for review by the user, who may make appropriate

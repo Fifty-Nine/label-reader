@@ -55,3 +55,6 @@ secrets.txt
 .poetry_cache/
 .pre-commit-cache/
 .pylint.d/
+
+# Used for caching within gemini sandboxes
+.cache/
