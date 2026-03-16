@@ -13,12 +13,33 @@
         #camera-preview { width: 100%; max-height: 400px; background: #000; border-radius: 10px; display: none; margin-bottom: 15px; }
         .nav-tabs { border-bottom: none; margin-bottom: 20px; }
         .nav-link { cursor: pointer; }
+        .settings-card { background-color: #fff; border: 1px solid #dee2e6; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="container" id="main-container">
         <div class="card p-4 mb-4">
             <h2 class="text-center mb-4">Inventory Label Reader</h2>
+
+            <!-- Collapsible Settings -->
+            <div class="mb-4">
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#settingsCollapse">
+                    ⚙️ Prompt Settings
+                </button>
+                <div class="collapse mt-3" id="settingsCollapse">
+                    <div class="settings-card p-3">
+                        <div class="mb-3">
+                            <label for="label_desc" class="form-label">Label Description</label>
+                            <input type="text" class="form-control" id="label_desc" name="label_desc" value="handwritten labels on pieces of tape">
+                            <div class="form-text">Describe what the labels look like (e.g., "dry-erase on magnets").</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="include_date" name="include_date" checked>
+                            <label class="form-check-label" for="include_date">Extract Dates</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <ul class="nav nav-tabs nav-fill" id="sourceTab" role="tablist">
                 <li class="nav-item">
@@ -33,6 +54,10 @@
                 <!-- Upload Section -->
                 <div class="tab-pane fade show active" id="upload-sec">
                     <form id="uploadForm" action="/process" method="post" enctype="multipart/form-data">
+                        <!-- Hidden fields to sync with settings -->
+                        <input type="hidden" name="label_desc_hidden" id="label_desc_hidden">
+                        <input type="hidden" name="include_date_hidden" id="include_date_hidden">
+                        
                         <div class="mb-3">
                             <label for="file" class="form-label">Select Label Image (JPG)</label>
                             <input class="form-control" type="file" id="file" name="file" accept=".jpg,.jpeg" required>
@@ -76,14 +101,18 @@
                     <thead class="table-light">
                         <tr>
                             <th>Item</th>
+                            {% if results[0] and results[0].date %}
                             <th>Date</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
                         {% for entry in results %}
                         <tr>
                             <td>{{ entry.item }}</td>
+                            {% if entry.date %}
                             <td>{{ entry.date }}</td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -105,10 +134,16 @@
             const canvas = document.getElementById('capture-canvas');
             const startCameraBtn = document.getElementById('startCameraBtn');
             const captureBtn = document.getElementById('captureBtn');
+            const labelDescInput = document.getElementById('label_desc');
+            const includeDateCheckbox = document.getElementById('include_date');
             let stream = null;
 
             if (uploadForm) {
                 uploadForm.onsubmit = function() {
+                    // Sync settings to hidden form fields
+                    document.getElementById('label_desc_hidden').value = labelDescInput.value;
+                    document.getElementById('include_date_hidden').value = includeDateCheckbox.checked;
+                    
                     submitBtn.disabled = true;
                     loading.style.display = 'block';
                 };
@@ -132,7 +167,6 @@
 
             if (captureBtn) {
                 captureBtn.onclick = async function() {
-                    // Use actual video dimensions
                     const width = video.videoWidth;
                     const height = video.videoHeight;
                     
@@ -157,12 +191,15 @@
                         if (!blob || blob.size === 0) {
                             alert('Error: Captured image is empty.');
                             loading.style.display = 'none';
-                            initApp(); // Reset
+                            initApp();
                             return;
                         }
 
                         const formData = new FormData();
                         formData.append('file', blob, 'capture.jpg');
+                        // Include settings
+                        formData.append('label_desc', labelDescInput.value);
+                        formData.append('include_date', includeDateCheckbox.checked);
 
                         try {
                             const response = await fetch('/process', {
@@ -174,13 +211,10 @@
                             const parser = new DOMParser();
                             const newDoc = parser.parseFromString(html, 'text/html');
 
-                            // Update the main container
                             document.getElementById('main-container').innerHTML = newDoc.getElementById('main-container').innerHTML;
 
-                            // Re-initialize scripts for the new elements
                             initApp();
 
-                            // If we were on the camera tab, switch back to it so the user sees consistency
                             const cameraTab = new bootstrap.Tab(document.getElementById('camera-tab'));
                             cameraTab.show();
 
@@ -193,7 +227,6 @@
             }
         }
 
-        // Initial call
         initApp();
     </script>
 
