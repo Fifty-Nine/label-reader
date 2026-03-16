@@ -10,8 +10,8 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 # Configuration
-OLLAMA_URL = "https://ollama.home.trprince.com/api/generate"
-MODEL_NAME = "qwen2.5vl:7b"
+OLLAMA_URL = os.getenv("OLLAMA_URL")
+MODEL_NAME = os.getenv("MODEL_NAME", "qwen2.5vl:7b")
 
 PROMPT = (
     "You are an automated optical character recognition system. Your sole function is to read "
@@ -32,6 +32,11 @@ async def read_item(request: Request):
 
 @app.post("/process", response_class=HTMLResponse)
 async def process_image(request: Request, file: UploadFile = File(...)):
+    if not OLLAMA_URL:
+        return templates.TemplateResponse("index.html", {
+            "request": request, 
+            "error": "OLLAMA_URL is not configured. Please set it as an environment variable."
+        })
     try:
         # Read file and encode to base64
         contents = await file.read()
