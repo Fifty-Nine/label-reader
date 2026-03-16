@@ -5,13 +5,13 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 ## Phase 0: Basic Project Structure
 
 **DONE** 1. Create subfolders for the frontend and the backend.
-2. **Backend:** Create basic project structure for the python backend using poetry. Include an appropriate unit testing framework and configure poetry to use a pre-commit hook with pylint, flake8, mypy and unit test checks.
+**DONE** 2. **Backend:** Create basic project structure for the python backend using poetry. Include an appropriate unit testing framework and configure poetry to use a pre-commit hook with pylint, flake8, mypy and unit test checks.
 
 ## Phase 1: Core MVP - Image Upload and Basic Extraction
 
-1.  **Backend:** Implement a basic `POST /api/extract` endpoint that accepts a file upload.
-2.  **Backend:** Integrate the `ollama` client and use it in the endpoint to process the uploaded image with a **hardcoded model name** (e.g., `qwen2.5vl:7b`).
-3.  **Backend:** Add `pytest` to the project and write an initial unit test for the `/api/extract` endpoint. The test must mock the `ollama.Client` and verify that the endpoint returns a successful response.
+**DONE** 1.  **Backend:** Implement a basic `POST /api/extract` endpoint that accepts a file upload.
+**DONE** 2.  **Backend:** Integrate the `ollama` client and use it in the endpoint to process the uploaded image with a **hardcoded model name** (e.g., `qwen2.5vl:7b`).
+**DONE** 3.  **Backend:** Add `pytest` to the project and write an initial unit test for the `/api/extract` endpoint. The test must mock the `ollama.Client` and verify that the endpoint returns a successful response.
 4.  **Frontend:** Initialize a new Vue 3 project (e.g., using `npm create vue@latest`).
 5.  **Frontend:** Create a simple view with a file input and a "Submit" button.
 6.  **Frontend:** Implement the logic to call the `POST /api/extract` endpoint upon form submission.

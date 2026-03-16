@@ -50,3 +50,8 @@ secrets.txt
 # Databases (if used as file-based)
 *.sqlite
 *.db
+
+# Cache/tool directories
+.poetry_cache/
+.pre-commit-cache/
+.pylint.d/
