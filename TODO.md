@@ -14,8 +14,8 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 **DONE** 3.  **Backend:** Add `pytest` to the project and write an initial unit test for the `/api/extract` endpoint. The test must mock the `ollama.Client` and verify that the endpoint returns a successful response.
 **DONE** 4.  **Frontend:** Initialize a new Vue 3 project (e.g., using `npm create vue@latest`).
 **DONE** 5.  **Frontend:** Create a simple view with a file input and a "Submit" button.
-6.  **Frontend:** Implement the logic to call the `POST /api/extract` endpoint upon form submission.
-7.  **Frontend:** Display the raw JSON response returned from the backend.
+**DONE** 6.  **Frontend:** Implement the logic to call the `POST /api/extract` endpoint upon form submission.
+**DONE** 7.  **Frontend:** Display the raw JSON response returned from the backend.
 
 ## Phase 2: Dynamic Model Selection
 

@@ -3,11 +3,15 @@ import { ref } from 'vue'
 
 const selectedFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const isSubmitting = ref(false)
+const errorMessage = ref<string | null>(null)
+const rawResult = ref<any>(null)
 
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files.length > 0) {
     selectedFile.value = target.files[0] || null
+    errorMessage.value = null
   } else {
     selectedFile.value = null
   }
@@ -17,13 +21,39 @@ const triggerFileInput = () => {
   fileInput.value?.click()
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!selectedFile.value) {
-    alert('Please select a file first.')
+    errorMessage.value = 'Please select a file first.'
     return
   }
-  // TODO: Implementation for Phase 1 Step 6
-  console.log('Submitting file:', selectedFile.value.name)
+
+  isSubmitting.value = true
+  errorMessage.value = null
+  rawResult.value = null
+
+  try {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `Request failed with status ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log('Extraction Result:', data)
+    rawResult.value = data
+  } catch (error: any) {
+    console.error('Error submitting file:', error)
+    errorMessage.value = error.message || 'An unexpected error occurred.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -35,26 +65,59 @@ const handleSubmit = () => {
       <div class="form-group">
         <label>Select Label Image (JPG)</label>
         <div class="file-input-wrapper">
-          <input
-            type="file"
-            accept="image/*"
-            @change="handleFileChange"
+          <input 
+            type="file" 
+            accept="image/*" 
+            @change="handleFileChange" 
             ref="fileInput"
             class="hidden-input"
           />
-          <button type="button" class="btn-choose" @click="triggerFileInput">Choose File</button>
+          <button type="button" class="btn-choose" @click="triggerFileInput" :disabled="isSubmitting">
+            Choose File
+          </button>
           <span class="file-name">
             {{ selectedFile ? selectedFile.name : 'No file chosen' }}
           </span>
         </div>
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
       </div>
 
-      <button type="submit" class="btn-primary" :disabled="!selectedFile">Process Upload</button>
+      <button type="submit" class="btn-primary" :disabled="!selectedFile || isSubmitting">
+        {{ isSubmitting ? 'Processing...' : 'Process Upload' }}
+      </button>
     </form>
+
+    <div v-if="rawResult" class="result-container">
+      <h3>Extraction Result</h3>
+      <pre>{{ JSON.stringify(rawResult, null, 2) }}</pre>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.result-container {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.result-container h3 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: var(--color-heading);
+}
+
+pre {
+  background: var(--color-background-soft);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  border: 1px solid var(--color-border);
+}
+
 .card {
   background: var(--color-background);
   border-radius: 12px;
@@ -134,5 +197,11 @@ const handleSubmit = () => {
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 </style>
