@@ -13,7 +13,7 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 **DONE** 2.  **Backend:** Integrate the `ollama` client and use it in the endpoint to process the uploaded image with a **hardcoded model name** (e.g., `qwen2.5vl:7b`).
 **DONE** 3.  **Backend:** Add `pytest` to the project and write an initial unit test for the `/api/extract` endpoint. The test must mock the `ollama.Client` and verify that the endpoint returns a successful response.
 **DONE** 4.  **Frontend:** Initialize a new Vue 3 project (e.g., using `npm create vue@latest`).
-5.  **Frontend:** Create a simple view with a file input and a "Submit" button.
+**DONE** 5.  **Frontend:** Create a simple view with a file input and a "Submit" button.
 6.  **Frontend:** Implement the logic to call the `POST /api/extract` endpoint upon form submission.
 7.  **Frontend:** Display the raw JSON response returned from the backend.
 
