@@ -2,8 +2,14 @@
 Main module for the Label Reader backend API.
 """
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse
+import traceback
+from fastapi import (FastAPI,
+                     File,
+                     HTTPException,
+                     Request,
+                     UploadFile)
+from fastapi.responses import (FileResponse,
+                               JSONResponse)
 from ollama import Client
 
 app = FastAPI(title="Label Reader API")
@@ -17,6 +23,21 @@ ollama_client = Client(host=OLLAMA_HOST)
 STATIC_DIR = os.getenv("STATIC_DIR", "static")
 
 
+@app.exception_handler(Exception)
+def custom_exception_handler(_request: Request, ex: Exception):
+    """Handle arbitrary exceptions thrown by handlers."""
+    # Print the exception backtrace to the server log
+    traceback.print_exception(type(ex), ex, ex.__traceback__)
+
+    tb = '\n'.join(traceback.format_exception(type(ex),
+                                              ex,
+                                              ex.__traceback__))
+    return JSONResponse(
+        status_code=500,
+        content={'detail': f"Internal Server Error: {tb}"}
+    )
+
+
 @app.post("/api/extract")
 async def extract_label(file: UploadFile = File(...)):
     """
@@ -27,19 +48,15 @@ async def extract_label(file: UploadFile = File(...)):
 
     contents = await file.read()
 
-    # Process with ollama
-    try:
-        response = ollama_client.chat(
-            model='qwen3.5:9b',
-            messages=[{
-                'role': 'user',
-                'content': 'Extract the text from this label.',
-                'images': [contents]
-            }]
-        )
-        return {"result": response['message']['content']}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    response = ollama_client.chat(
+        model='qwen3.5:9b',
+        messages=[{
+            'role': 'user',
+            'content': 'Extract the text from this label.',
+            'images': [contents]
+        }]
+    )
+    return {"result": response['message']['content']}
 
 
 # SPA Fallback and Static File Serving
