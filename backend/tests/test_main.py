@@ -101,3 +101,56 @@ def test_extract_label_non_structured_data(mocker):
 
     assert response.status_code == 200
     assert response.json() == {"result": "This is plain text, not JSON."}
+
+
+def test_get_models_success(mocker):
+    """
+    Test successfully fetching models from the Ollama client.
+    """
+    mock_list = mocker.patch("app.main.ollama_client.list")
+    mock_list.return_value = {
+        "models": [
+            {"name": "llama3:latest",
+             "model": "llama3:latest",
+             "modified_at": "2023-11-04T14:56:49.277302595-07:00",
+             "size": 3826793677,
+             "digest": "fe938a131f40e6f6d40083c9f0f430a515233eb2",
+             "details": {"parent_model": "",
+                         "format": "gguf",
+                         "family": "llama",
+                         "families": ["llama"],
+                         "parameter_size": "7B",
+                         "quantization_level": "Q4_0"}},
+            {"name": "qwen3.5:9b",
+             "model": "qwen3.5:9b",
+             "modified_at": "2023-11-04T14:56:49.277302595-07:00",
+             "size": 3826793677,
+             "digest": "fe938a131f40e6f6d40083c9f0f430a515233eb2",
+             "details": {"parent_model": "",
+                         "format": "gguf",
+                         "family": "llama",
+                         "families": ["llama"],
+                         "parameter_size": "7B",
+                         "quantization_level": "Q4_0"}}
+        ]
+    }
+
+    response = client.get("/api/models")
+
+    assert response.status_code == 200
+    assert response.json() == {"models": ["llama3:latest", "qwen3.5:9b"]}
+    mock_list.assert_called_once()
+
+
+def test_get_models_transport_error(mocker):
+    """
+    Test that the exception handler correctly catches
+    failures when fetching models.
+    """
+    mock_list = mocker.patch("app.main.ollama_client.list")
+    mock_list.side_effect = ollama.RequestError("Connection refused")
+
+    response = client.get("/api/models")
+
+    assert response.status_code == 500
+    assert "Connection refused" in response.json()["detail"]

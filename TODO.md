@@ -19,7 +19,7 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 
 ## Phase 2: Dynamic Model Selection
 
-1.  **Backend:** Implement the `GET /api/models` endpoint that uses the `ollama.Client` to fetch available models.
+**DONE** 1.  **Backend:** Implement the `GET /api/models` endpoint that uses the `ollama.Client` to fetch available models.
 2.  **Backend:** Update the `/api/extract` endpoint to accept a `model_name` field in its Pydantic model. Use this value instead of the hardcoded one.
 3.  **Backend:** Add/update unit tests for the `/api/models` endpoint and the modified `/api/extract` endpoint.
 4.  **Frontend:** On application load, call the `/api/models` endpoint to fetch the list of available models.

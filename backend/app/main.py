@@ -59,6 +59,16 @@ async def extract_label(file: UploadFile = File(...)):
     return {"result": response['message']['content']}
 
 
+@app.get("/api/models")
+def get_models():
+    """
+    Gets the list of available models from Ollama.
+    """
+    models = [m['model'] for m in ollama_client.list()['models']]
+
+    return {'models': models}
+
+
 # SPA Fallback and Static File Serving
 # These must be added AFTER the API routes to avoid overshadowing them.
 if os.path.exists(STATIC_DIR):
