@@ -25,7 +25,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ParsedLabel"
+                  },
+                  "type": "array",
+                  "title": "Response Extract Label Api Extract Post"
+                }
               }
             }
           },
@@ -52,7 +58,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ModelList"
+                }
               }
             }
           }
@@ -116,6 +124,39 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ModelList": {
+        "properties": {
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "description": "The list of models supported by the server."
+          }
+        },
+        "type": "object",
+        "required": [
+          "models"
+        ],
+        "title": "ModelList",
+        "description": "List of models returned from the API."
+      },
+      "ParsedLabel": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "The (non-date) text parsed from an item label."
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ParsedLabel",
+        "description": "Represents a label parsed from an image."
       },
       "ValidationError": {
         "properties": {

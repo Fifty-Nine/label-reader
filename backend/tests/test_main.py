@@ -16,7 +16,7 @@ def test_extract_label_success(mocker):
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
         'message': {
-            'content': 'Extracted label text'
+            'content': '[{"text": "Extracted label text"}]'
         }
     }
 
@@ -31,7 +31,7 @@ def test_extract_label_success(mocker):
 
     # Assertions
     assert response.status_code == 200
-    assert response.json() == {"result": "Extracted label text"}
+    assert response.json() == [{"text": "Extracted label text"}]
     mock_chat.assert_called_once()
 
 
@@ -43,7 +43,7 @@ def test_extract_label_success_default_model(mocker):
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
         'message': {
-            'content': 'Extracted label text'
+            'content': '[{"text": "Extracted label text"}]'
         }
     }
 
@@ -57,7 +57,7 @@ def test_extract_label_success_default_model(mocker):
 
     # Assertions
     assert response.status_code == 200
-    assert response.json() == {"result": "Extracted label text"}
+    assert response.json() == [{"text": "Extracted label text"}]
     mock_chat.assert_called_once()
 
 
@@ -134,8 +134,9 @@ def test_extract_label_non_structured_data(mocker):
                            data={"model_name": "qwen3.5:9b"},
                            files=files)
 
-    assert response.status_code == 200
-    assert response.json() == {"result": "This is plain text, not JSON."}
+    assert response.status_code == 500
+    assert ('Model returned data that '
+            'did not match the schema.' in response.json()['detail'])
 
 
 def test_get_models_success(mocker):

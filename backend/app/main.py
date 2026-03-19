@@ -2,6 +2,7 @@
 Main module for the Label Reader backend API.
 """
 import os
+import json
 import traceback
 from typing import Annotated
 from fastapi import (FastAPI,
@@ -13,6 +14,7 @@ from fastapi import (FastAPI,
 from fastapi.responses import (FileResponse,
                                JSONResponse)
 from ollama import Client, ResponseError as OllamaResponseError
+from pydantic import BaseModel, Field
 
 app = FastAPI(title="Label Reader API")
 
@@ -41,11 +43,17 @@ def custom_exception_handler(_request: Request, ex: Exception):
     )
 
 
+class ParsedLabel(BaseModel):
+    """Represents a label parsed from an image."""
+    text: str = Field(description="The (non-date) text parsed from an "
+                                  "item label.")
+
+
 @app.post("/api/extract")
 async def extract_label(
     model_name: Annotated[str | None, Form()] = None,
     file: UploadFile = File(...)
-):
+) -> list[ParsedLabel]:
     """
     Extracts structured data from an uploaded image of a label.
     """
@@ -53,33 +61,56 @@ async def extract_label(
         raise HTTPException(status_code=400, detail="File must be an image")
 
     contents = await file.read()
+    prompt = (
+        "You are an automated OCR system. Your sole function is to read "
+        "labels from the provided image. You should extract only the text "
+        "from each label on each labeled item. Do not extract any background "
+        "text. You must return a JSON array matching this schema: "
+        f"{json.dumps(ParsedLabel.model_json_schema())} "
+        "You must return a valid array even if there are zero or "
+        "one labeled items."
+    )
 
     try:
         response = ollama_client.chat(
             model=model_name or DEFAULT_MODEL,
+            format='json',
             messages=[{
                 'role': 'user',
-                'content': 'Extract the text from this label.',
+                'content': prompt,
                 'images': [contents]
             }]
         )
-        return {"result": response['message']['content']}
+
+        return [ParsedLabel(**item)
+                for item in json.loads(response['message']['content'])]
     except OllamaResponseError as e:
         if e.status_code == 404:
             raise HTTPException(
                 status_code=400,
                 detail='Model not found on Ollama instance.') from e
         raise e
+    except json.decoder.JSONDecodeError as e:
+        raise HTTPException(
+                status_code=500,
+                detail='Model returned data that did '
+                       'not match the schema.') from e
+
+
+class ModelList(BaseModel):
+    """List of models returned from the API."""
+    models: list[str] = Field(description='The list of models supported '
+                                          'by the server.')
 
 
 @app.get("/api/models")
-def get_models():
+def get_models() -> ModelList:
     """
     Gets the list of available models from Ollama.
     """
     models = [m['model'] for m in ollama_client.list()['models']]
 
-    return {'models': models}
+    return ModelList(models=models)
 
 
 # SPA Fallback and Static File Serving
