@@ -120,6 +120,9 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
            branding, or logos on the tape/sticker material itself (e.g., faint
            pre-printed branding codes.
         3. IGNORE text embossed into text, plastic, metal or other materials.
+        4. If there are multiple items with labels matching the TARGET LABEL
+           VISUAL description and the labels are identical, you should include
+           one entry for each duplicated item.
 
         You must return a JSON array matching this JSON Schema specification:
         <schema>
@@ -140,6 +143,10 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
         (such as 'properties', 'type', 'title', or 'description') in your
         final JSON. Your output must contain only the actual extracted
         data keys defined within the schema.
+
+        CRITICAL INSTRUCTION: If you find you are unable to interpret labels
+        presented to you, DO NOT attempt to guess or over-analyze. Instead,
+        omit those labels from your result and continue.
         """)
 
 
@@ -183,7 +190,9 @@ async def extract_label(
                 'role': 'user',
                 'content': prompt,
                 'images': [contents]
-            }]
+            }],
+            options={'temperature': 0.1,
+                     'keep_alive': '30m'}
         )
         response_text = response['message']['content']
 
