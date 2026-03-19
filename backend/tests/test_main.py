@@ -177,7 +177,10 @@ def test_get_models_success(mocker):
     response = client.get("/api/models")
 
     assert response.status_code == 200
-    assert response.json() == {"models": ["llama3:latest", "qwen3.5:9b"]}
+    assert response.json() == {
+        "models": ["llama3:latest", "qwen3.5:9b"],
+        "default": "qwen3.5:9b"
+    }
     mock_list.assert_called_once()
 
 

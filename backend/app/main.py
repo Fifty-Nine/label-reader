@@ -146,6 +146,8 @@ class ModelList(BaseModel):
     """List of models returned from the API."""
     models: list[str] = Field(description='The list of models supported '
                                           'by the server.')
+    default: str | None = Field(default=None,
+                                description='The preferred default model.')
 
 
 @app.get("/api/models")
@@ -155,7 +157,7 @@ def get_models() -> ModelList:
     """
     models = [m['model'] for m in ollama_client.list()['models']]
 
-    return ModelList(models=models)
+    return ModelList(models=models, default=DEFAULT_MODEL)
 
 
 # SPA Fallback and Static File Serving

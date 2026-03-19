@@ -134,6 +134,18 @@
             "type": "array",
             "title": "Models",
             "description": "The list of models supported by the server."
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default",
+            "description": "The preferred default model."
           }
         },
         "type": "object",
