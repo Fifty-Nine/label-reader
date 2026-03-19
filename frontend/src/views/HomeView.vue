@@ -21,7 +21,7 @@ onMounted(async () => {
     const data = await response.json()
     models.value = data.models || []
     if (models.value.length > 0) {
-      selectedModel.value = models.value[0] || null
+      selectedModel.value = data.default || models.value[0] || null
     }
   } catch (error) {
     console.error('Error fetching models:', error)
