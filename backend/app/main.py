@@ -6,7 +6,7 @@ import json
 import textwrap
 import traceback
 from datetime import date
-from typing import Annotated, NoReturn
+from typing import Annotated, Any, NoReturn
 
 from fastapi import (FastAPI,
                      File,
@@ -29,6 +29,24 @@ ollama_client = Client(host=OLLAMA_HOST)
 
 # Configuration for static files (frontend)
 STATIC_DIR = os.getenv("STATIC_DIR", "static")
+
+
+def filter_unsupported_keys(schema: Any) -> Any:
+    """
+    Filters out attributes that the ollama schema functionality does not
+    support.
+    """
+    if isinstance(schema, dict):
+        return {
+            key: filter_unsupported_keys(value)
+            for key, value in schema.items()
+            if key != "pattern"
+        }
+
+    if isinstance(schema, list):
+        return [filter_unsupported_keys(item) for item in schema]
+
+    return schema
 
 
 @app.exception_handler(Exception)
@@ -65,6 +83,14 @@ class DatedLabel(ParsedLabel):
                       pattern=r"^\d{4}-\d{2}-\d{2}")
 
 
+parsed_label_schema = filter_unsupported_keys(
+        TypeAdapter(list[ParsedLabel]).json_schema()
+)
+dated_label_schema = filter_unsupported_keys(
+        TypeAdapter(list[DatedLabel]).json_schema()
+)
+
+
 def get_model_prompt(user_desc: str = "handwritten labels on blue "
                                       "painter's tape",
                      include_date: bool = False) -> str:
@@ -74,7 +100,8 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
     date_instructions = textwrap.dedent(f"""
         In the event that a date is ambiguous (e.g. 03-04-11 could be
         March 4th 2011, April 3rd 2011, or even April 11 2003) you should
-        assume the date is in M-D-Y format.
+        assume the date is in M-D-Y format. DO NOT include the date in
+        the label text.
 
         Today's date is {date.today().isoformat()}.""")
 
@@ -140,8 +167,7 @@ async def extract_label(
 
     contents = await file.read()
 
-    schema = (TypeAdapter(list[DatedLabel]).json_schema() if include_date else
-              TypeAdapter(list[ParsedLabel]).json_schema())
+    schema = (dated_label_schema if include_date else parsed_label_schema)
 
     prompt = get_model_prompt(
         user_desc=label_desc or "handwritten labels on blue painter's tape",
