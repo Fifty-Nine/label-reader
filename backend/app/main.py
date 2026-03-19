@@ -3,8 +3,9 @@ Main module for the Label Reader backend API.
 """
 import os
 import json
+import textwrap
 import traceback
-from typing import Annotated
+from typing import Annotated, NoReturn
 from fastapi import (FastAPI,
                      File,
                      Form,
@@ -14,7 +15,7 @@ from fastapi import (FastAPI,
 from fastapi.responses import (FileResponse,
                                JSONResponse)
 from ollama import Client, ResponseError as OllamaResponseError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter
 
 app = FastAPI(title="Label Reader API")
 
@@ -45,8 +46,61 @@ def custom_exception_handler(_request: Request, ex: Exception):
 
 class ParsedLabel(BaseModel):
     """Represents a label parsed from an image."""
-    text: str = Field(description="The (non-date) text parsed from an "
-                                  "item label.")
+    visual_evidence: str = Field(
+            description="Briefly describes the physical material and style "
+                        "of the label. This should include details about the "
+                        "label itself (e.g. blue painter's tape with "
+                        "black marker, white label with black machine-printed "
+                        "text, etc.)")
+    text: str = Field(description="The text from the label.")
+
+
+def get_model_prompt(user_desc: str = "handwritten labels on blue "
+                                      "painter's tape") -> str:
+    """Get the prompt for the model."""
+    return textwrap.dedent(f"""
+        You are an automated OCR system. Your sole function is to read
+        labels from the provided image. You should extract only the text
+        from each label on each labeled item.
+
+        TARGET LABEL VISUAL DESCRIPTION:
+        {user_desc}
+
+        CRITICAL RULES:
+        1. ONLY extract text that matches the TARGET LABEL VISUAL DESCRIPTION.
+        2. IGNORE all commercial pre-printed text, manufacturer
+           branding, or logos on the tape/sticker material itself (e.g., faint
+           pre-printed branding codes.
+        3. IGNORE text embossed into text, plastic, metal or other materials.
+
+        You must return a JSON array matching this JSON Schema specification:
+        <schema>
+        {json.dumps(ParsedLabel.model_json_schema())}
+        </schema>
+
+        You MUST return a valid array even if there are zero or one labeled
+        items.
+
+        In some cases, you may encounter labels with multiple layers of text,
+        e.g. a handwritten label on top of commercially printed text. In these
+        cases you MUST only record the text maching the TARGET LABEL VISUAL
+        DESCRIPTION and IGNORE any text that does not match.
+
+        CRITICAL INSTRUCTION: Do NOT output the schema definition keys
+        (such as 'properties', 'type', 'title', or 'description') in your
+        final JSON. Your output must contain only the actual extracted
+        data keys defined within the schema.
+        """)
+
+
+def model_response_error(e: Exception, response_text: str) -> NoReturn:
+    """Raise an error indicating a mismatch between the model's response
+    and the schema expectations."""
+    raise HTTPException(
+        status_code=500,
+        detail='Model returned data that did not match the schema. '
+               f'Model response: "{response_text!r}"'
+    ) from e
 
 
 @app.post("/api/extract")
@@ -61,29 +115,21 @@ async def extract_label(
         raise HTTPException(status_code=400, detail="File must be an image")
 
     contents = await file.read()
-    prompt = (
-        "You are an automated OCR system. Your sole function is to read "
-        "labels from the provided image. You should extract only the text "
-        "from each label on each labeled item. Do not extract any background "
-        "text. You must return a JSON array matching this schema: "
-        f"{json.dumps(ParsedLabel.model_json_schema())} "
-        "You must return a valid array even if there are zero or "
-        "one labeled items."
-    )
 
     try:
         response = ollama_client.chat(
             model=model_name or DEFAULT_MODEL,
-            format='json',
+            format=TypeAdapter(list[ParsedLabel]).json_schema(),
             messages=[{
                 'role': 'user',
-                'content': prompt,
+                'content': get_model_prompt(),
                 'images': [contents]
             }]
         )
+        response_text = response['message']['content']
 
         return [ParsedLabel(**item)
-                for item in json.loads(response['message']['content'])]
+                for item in json.loads(response_text)]
     except OllamaResponseError as e:
         if e.status_code == 404:
             raise HTTPException(
@@ -91,10 +137,9 @@ async def extract_label(
                 detail='Model not found on Ollama instance.') from e
         raise e
     except json.decoder.JSONDecodeError as e:
-        raise HTTPException(
-                status_code=500,
-                detail='Model returned data that did '
-                       'not match the schema.') from e
+        model_response_error(e, response_text)
+    except TypeError as e:
+        model_response_error(e, response_text)
 
 
 class ModelList(BaseModel):

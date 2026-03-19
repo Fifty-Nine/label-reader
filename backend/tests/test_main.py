@@ -1,6 +1,7 @@
 """
 Unit tests for the main backend API.
 """
+import json
 import ollama
 from fastapi.testclient import TestClient
 from app.main import app
@@ -12,11 +13,12 @@ def test_extract_label_success(mocker):
     """
     Test successful extraction of a label image.
     """
-    # Mock the ollama.Client.chat method
+    response_obj = {"visual_evidence": "description of the label",
+                    "text": "extracted label text."}
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
         'message': {
-            'content': '[{"text": "Extracted label text"}]'
+            'content': json.dumps([response_obj])
         }
     }
 
@@ -31,7 +33,7 @@ def test_extract_label_success(mocker):
 
     # Assertions
     assert response.status_code == 200
-    assert response.json() == [{"text": "Extracted label text"}]
+    assert response.json() == [response_obj]
     mock_chat.assert_called_once()
 
 
@@ -39,11 +41,12 @@ def test_extract_label_success_default_model(mocker):
     """
     Test successful extraction of a label image.
     """
-    # Mock the ollama.Client.chat method
+    response_obj = {"visual_evidence": "description of the label",
+                    "text": "extracted label text."}
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
         'message': {
-            'content': '[{"text": "Extracted label text"}]'
+            'content': json.dumps([response_obj])
         }
     }
 
@@ -57,7 +60,7 @@ def test_extract_label_success_default_model(mocker):
 
     # Assertions
     assert response.status_code == 200
-    assert response.json() == [{"text": "Extracted label text"}]
+    assert response.json() == [response_obj]
     mock_chat.assert_called_once()
 
 

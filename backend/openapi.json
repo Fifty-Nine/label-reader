@@ -145,14 +145,20 @@
       },
       "ParsedLabel": {
         "properties": {
+          "visual_evidence": {
+            "type": "string",
+            "title": "Visual Evidence",
+            "description": "Briefly describes the physical material and style of the label. This should include details about the label itself (e.g. blue painter's tape with black marker, white label with black machine-printed text, etc.)"
+          },
           "text": {
             "type": "string",
             "title": "Text",
-            "description": "The (non-date) text parsed from an item label."
+            "description": "The text from the label."
           }
         },
         "type": "object",
         "required": [
+          "visual_evidence",
           "text"
         ],
         "title": "ParsedLabel",
