@@ -26,3 +26,10 @@ repos:
         types: [python]
         files: ^backend/
         pass_filenames: false
+    -   id: generate-openapi-schema
+        name: Generate backend OpenAPI schema
+        entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && ../.venv/bin/poetry run python regen_schema.py'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
