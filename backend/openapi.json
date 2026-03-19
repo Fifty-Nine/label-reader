@@ -145,10 +145,10 @@
             "title": "Visual Evidence",
             "description": "Briefly describes the physical material and style of the label. This should include details about the label itself (e.g. blue painter's tape with black marker, white label with black machine-printed text, etc.)"
           },
-          "text": {
+          "item": {
             "type": "string",
-            "title": "Text",
-            "description": "The text from the label."
+            "title": "Item",
+            "description": "The description of the item from the label."
           },
           "date": {
             "type": "string",
@@ -160,7 +160,7 @@
         "type": "object",
         "required": [
           "visual_evidence",
-          "text",
+          "item",
           "date"
         ],
         "title": "DatedLabel",
@@ -216,16 +216,16 @@
             "title": "Visual Evidence",
             "description": "Briefly describes the physical material and style of the label. This should include details about the label itself (e.g. blue painter's tape with black marker, white label with black machine-printed text, etc.)"
           },
-          "text": {
+          "item": {
             "type": "string",
-            "title": "Text",
-            "description": "The text from the label."
+            "title": "Item",
+            "description": "The description of the item from the label."
           }
         },
         "type": "object",
         "required": [
           "visual_evidence",
-          "text"
+          "item"
         ],
         "title": "ParsedLabel",
         "description": "Represents a label parsed from an image."

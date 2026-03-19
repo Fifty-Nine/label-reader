@@ -72,7 +72,8 @@ class ParsedLabel(BaseModel):
                         "label itself (e.g. blue painter's tape with "
                         "black marker, white label with black machine-printed "
                         "text, etc.)")
-    text: str = Field(description="The text from the label.")
+    item: str = Field(description="The description of the item "
+                                  "from the label.")
 
 
 class DatedLabel(ParsedLabel):
@@ -107,8 +108,8 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
 
     return textwrap.dedent(f"""
         You are an automated OCR system. Your sole function is to read
-        labels from the provided image. You should extract only the text
-        from each label on each labeled item.
+        labels on items from the provided image. You should extract only the
+        text of the labeled items.
 
         TARGET LABEL VISUAL DESCRIPTION:
         {user_desc}

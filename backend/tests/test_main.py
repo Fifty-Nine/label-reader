@@ -14,7 +14,7 @@ def test_extract_label_success(mocker):
     Test successful extraction of a label image.
     """
     response_obj = {"visual_evidence": "description of the label",
-                    "text": "extracted label text."}
+                    "item": "extracted label text."}
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
         'message': {
@@ -42,7 +42,7 @@ def test_extract_label_with_date_success(mocker):
     Test successful extraction of a label image including a date.
     """
     response_obj = {"visual_evidence": "description of the label",
-                    "text": "extracted label text.",
+                    "item": "extracted label text.",
                     "date": "2026-01-01"}
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
@@ -72,7 +72,7 @@ def test_extract_label_success_default_model(mocker):
     Test successful extraction of a label image.
     """
     response_obj = {"visual_evidence": "description of the label",
-                    "text": "extracted label text."}
+                    "item": "extracted label text."}
     mock_chat = mocker.patch("app.main.ollama_client.chat")
     mock_chat.return_value = {
         'message': {
