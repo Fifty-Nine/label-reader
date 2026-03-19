@@ -25,7 +25,35 @@ def test_extract_label_success(mocker):
     files = {"file": ("test.png", file_content, "image/png")}
 
     # Send the request
-    response = client.post("/api/extract", files=files)
+    response = client.post("/api/extract",
+                           data={"model_name": "qwen3.5:9b"},
+                           files=files)
+
+    # Assertions
+    assert response.status_code == 200
+    assert response.json() == {"result": "Extracted label text"}
+    mock_chat.assert_called_once()
+
+
+def test_extract_label_success_default_model(mocker):
+    """
+    Test successful extraction of a label image.
+    """
+    # Mock the ollama.Client.chat method
+    mock_chat = mocker.patch("app.main.ollama_client.chat")
+    mock_chat.return_value = {
+        'message': {
+            'content': 'Extracted label text'
+        }
+    }
+
+    # Create a dummy image file
+    file_content = b"fake image content"
+    files = {"file": ("test.png", file_content, "image/png")}
+
+    # Send the request
+    response = client.post("/api/extract",
+                           files=files)
 
     # Assertions
     assert response.status_code == 200
@@ -41,7 +69,9 @@ def test_extract_label_invalid_file_type():
     file_content = b"fake text content"
     files = {"file": ("test.txt", file_content, "text/plain")}
 
-    response = client.post("/api/extract", files=files)
+    response = client.post("/api/extract",
+                           data={"model_name": "qwen3.5:9b"},
+                           files=files)
 
     assert response.status_code == 400
     assert response.json() == {"detail": "File must be an image"}
@@ -59,11 +89,12 @@ def test_extract_label_model_error_json(mocker):
     file_content = b"fake image content"
     files = {"file": ("test.png", file_content, "image/png")}
 
-    response = client.post("/api/extract", files=files)
+    response = client.post("/api/extract",
+                           data={"model_name": "qwen3.5:9b"},
+                           files=files)
 
-    assert response.status_code == 500
-    assert 'model not found' in response.json()["detail"]
-    assert '404' in response.json()["detail"]
+    assert response.status_code == 400
+    assert 'Model not found' in response.json()['detail']
 
 
 def test_extract_label_transport_error(mocker):
@@ -76,7 +107,9 @@ def test_extract_label_transport_error(mocker):
     file_content = b"fake image content"
     files = {"file": ("test.png", file_content, "image/png")}
 
-    response = client.post("/api/extract", files=files)
+    response = client.post("/api/extract",
+                           data={"model_name": "qwen3.5:9b"},
+                           files=files)
 
     assert response.status_code == 500
     assert "Connection refused" in response.json()["detail"]
@@ -97,7 +130,9 @@ def test_extract_label_non_structured_data(mocker):
     file_content = b"fake image content"
     files = {"file": ("test.png", file_content, "image/png")}
 
-    response = client.post("/api/extract", files=files)
+    response = client.post("/api/extract",
+                           data={"model_name": "qwen3.5:9b"},
+                           files=files)
 
     assert response.status_code == 200
     assert response.json() == {"result": "This is plain text, not JSON."}

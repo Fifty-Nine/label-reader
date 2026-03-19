@@ -3,20 +3,23 @@ Main module for the Label Reader backend API.
 """
 import os
 import traceback
+from typing import Annotated
 from fastapi import (FastAPI,
                      File,
+                     Form,
                      HTTPException,
                      Request,
                      UploadFile)
 from fastapi.responses import (FileResponse,
                                JSONResponse)
-from ollama import Client
+from ollama import Client, ResponseError as OllamaResponseError
 
 app = FastAPI(title="Label Reader API")
 
 # Use environment variable for Ollama host,
 # fallback to the dev instance from GEMINI.md
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "https://ollama.home.trprince.com")
+DEFAULT_MODEL = os.getenv("OLLAMA_DEFAULT_MODEL", "qwen3.5:9b")
 ollama_client = Client(host=OLLAMA_HOST)
 
 # Configuration for static files (frontend)
@@ -39,7 +42,10 @@ def custom_exception_handler(_request: Request, ex: Exception):
 
 
 @app.post("/api/extract")
-async def extract_label(file: UploadFile = File(...)):
+async def extract_label(
+    model_name: Annotated[str | None, Form()] = None,
+    file: UploadFile = File(...)
+):
     """
     Extracts structured data from an uploaded image of a label.
     """
@@ -48,15 +54,22 @@ async def extract_label(file: UploadFile = File(...)):
 
     contents = await file.read()
 
-    response = ollama_client.chat(
-        model='qwen3.5:9b',
-        messages=[{
-            'role': 'user',
-            'content': 'Extract the text from this label.',
-            'images': [contents]
-        }]
-    )
-    return {"result": response['message']['content']}
+    try:
+        response = ollama_client.chat(
+            model=model_name or DEFAULT_MODEL,
+            messages=[{
+                'role': 'user',
+                'content': 'Extract the text from this label.',
+                'images': [contents]
+            }]
+        )
+        return {"result": response['message']['content']}
+    except OllamaResponseError as e:
+        if e.status_code == 404:
+            raise HTTPException(
+                status_code=400,
+                detail='Model not found on Ollama instance.') from e
+        raise e
 
 
 @app.get("/api/models")
