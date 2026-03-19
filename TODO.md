@@ -37,8 +37,8 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 
 ## Phase 4: Camera Integration
 
-1.  **Frontend:** Add UI elements to switch between File Upload and Camera modes (e.g., tabs).
-2.  **Frontend:** Implement camera access using `navigator.mediaDevices.getUserMedia` and display the live video stream.
-3.  **Frontend:** Add a "Capture" button. When clicked, draw the current video frame to a `<canvas>`.
-4.  **Frontend:** Convert the canvas content to a `Blob` or `File` object.
-5.  **Frontend:** Send this captured image to the `POST /api/extract` endpoint, reusing all existing form logic for model selection and configuration.
+**DONE** 1.  **Frontend:** Add UI elements to switch between File Upload and Camera modes (e.g., tabs).
+**DONE** 2.  **Frontend:** Implement camera access using `navigator.mediaDevices.getUserMedia` and display the live video stream.
+**DONE** 3.  **Frontend:** Add a "Capture" button. When clicked, draw the current video frame to a `<canvas>`.
+**DONE** 4.  **Frontend:** Convert the canvas content to a `Blob` or `File` object.
+**DONE** 5.  **Frontend:** Send this captured image to the `POST /api/extract` endpoint, reusing all existing form logic for model selection and configuration.
