@@ -5,11 +5,21 @@ const selectedFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const isSubmitting = ref(false)
 const errorMessage = ref<string | null>(null)
-const rawResult = ref<unknown>(null)
+
+interface ExtractedLabel {
+  visual_evidence: string
+  item: string
+  date?: string
+}
+
+const rawResult = ref<ExtractedLabel[] | null>(null)
 
 const models = ref<string[]>([])
 const selectedModel = ref<string | null>(null)
 const isLoadingModels = ref(false)
+
+const labelDescription = ref<string>('')
+const includeDate = ref<boolean>(false)
 
 onMounted(async () => {
   isLoadingModels.value = true
@@ -60,6 +70,10 @@ const handleSubmit = async () => {
     if (selectedModel.value) {
       formData.append('model_name', selectedModel.value)
     }
+    if (labelDescription.value) {
+      formData.append('label_desc', labelDescription.value)
+    }
+    formData.append('include_date', includeDate.value ? 'true' : 'false')
 
     const response = await fetch('/api/extract', {
       method: 'POST',
@@ -68,6 +82,9 @@ const handleSubmit = async () => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      if (errorData.detail && Array.isArray(errorData.detail)) {
+        throw new Error(errorData.detail.map((e: { msg: string }) => e.msg).join(', '))
+      }
       throw new Error(errorData.detail || `Request failed with status ${response.status}`)
     }
 
@@ -125,9 +142,29 @@ const handleSubmit = async () => {
             {{ selectedFile ? selectedFile.name : 'No file chosen' }}
           </span>
         </div>
-        <div v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="labelDesc">Label Description (Optional)</label>
+        <input
+          type="text"
+          id="labelDesc"
+          v-model="labelDescription"
+          placeholder="e.g., Shipping label, product barcode"
+          class="form-input"
+          :disabled="isSubmitting"
+        />
+      </div>
+
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" v-model="includeDate" :disabled="isSubmitting" />
+          Extract Dates
+        </label>
+      </div>
+
+      <div v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
       </div>
 
       <button type="submit" class="btn-primary" :disabled="!selectedFile || isSubmitting">
@@ -137,7 +174,23 @@ const handleSubmit = async () => {
 
     <div v-if="rawResult" class="result-container">
       <h3>Extraction Result</h3>
-      <pre>{{ JSON.stringify(rawResult, null, 2) }}</pre>
+      <div class="table-responsive">
+        <table v-if="rawResult.length > 0" class="result-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th v-if="rawResult.some((r) => r.date)">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, index) in rawResult" :key="index">
+              <td>{{ row.item }}</td>
+              <td v-if="rawResult.some((r) => r.date)">{{ row.date || 'N/A' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="no-results">No labels extracted.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -155,13 +208,41 @@ const handleSubmit = async () => {
   color: var(--color-heading);
 }
 
-pre {
-  background: var(--color-background-soft);
-  padding: 1rem;
-  border-radius: 6px;
+.table-responsive {
   overflow-x: auto;
-  font-size: 0.85rem;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  background: var(--color-background-soft);
+  border-radius: 6px;
+  overflow: hidden;
   border: 1px solid var(--color-border);
+}
+
+.result-table th,
+.result-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.result-table th {
+  background-color: var(--color-background-mute);
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.result-table tr:last-child td {
+  border-bottom: none;
+}
+
+.no-results {
+  color: var(--color-text-light-2);
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
 .card {
@@ -252,6 +333,44 @@ pre {
   color: var(--color-text-light-2);
   font-size: 0.9rem;
   flex: 1;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #0d6efd;
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin-bottom: 0 !important;
+  font-weight: normal !important;
+}
+
+.checkbox-label input[type='checkbox'] {
+  cursor: pointer;
 }
 
 .btn-primary {
