@@ -5,7 +5,9 @@ import os
 import json
 import textwrap
 import traceback
+from datetime import date
 from typing import Annotated, NoReturn
+
 from fastapi import (FastAPI,
                      File,
                      Form,
@@ -55,9 +57,27 @@ class ParsedLabel(BaseModel):
     text: str = Field(description="The text from the label.")
 
 
+class DatedLabel(ParsedLabel):
+    """Represents a label parsed from an image that includes an
+    explicit date field."""
+    date: str = Field(description="The date printed on the label. MUST be in "
+                                  "ISO 8601 YYYY-MM-DD format.",
+                      pattern=r"^\d{4}-\d{2}-\d{2}")
+
+
 def get_model_prompt(user_desc: str = "handwritten labels on blue "
-                                      "painter's tape") -> str:
+                                      "painter's tape",
+                     include_date: bool = False) -> str:
     """Get the prompt for the model."""
+    schema = DatedLabel if include_date else ParsedLabel
+
+    date_instructions = textwrap.dedent(f"""
+        In the event that a date is ambiguous (e.g. 03-04-11 could be
+        March 4th 2011, April 3rd 2011, or even April 11 2003) you should
+        assume the date is in M-D-Y format.
+
+        Today's date is {date.today().isoformat()}.""")
+
     return textwrap.dedent(f"""
         You are an automated OCR system. Your sole function is to read
         labels from the provided image. You should extract only the text
@@ -75,7 +95,7 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
 
         You must return a JSON array matching this JSON Schema specification:
         <schema>
-        {json.dumps(ParsedLabel.model_json_schema())}
+        {json.dumps(schema.model_json_schema())}
         </schema>
 
         You MUST return a valid array even if there are zero or one labeled
@@ -85,6 +105,8 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
         e.g. a handwritten label on top of commercially printed text. In these
         cases you MUST only record the text maching the TARGET LABEL VISUAL
         DESCRIPTION and IGNORE any text that does not match.
+
+        {date_instructions if include_date else ''}
 
         CRITICAL INSTRUCTION: Do NOT output the schema definition keys
         (such as 'properties', 'type', 'title', or 'description') in your
@@ -106,8 +128,10 @@ def model_response_error(e: Exception, response_text: str) -> NoReturn:
 @app.post("/api/extract")
 async def extract_label(
     model_name: Annotated[str | None, Form()] = None,
+    label_desc: Annotated[str | None, Form()] = None,
+    include_date: Annotated[bool, Form()] = False,
     file: UploadFile = File(...)
-) -> list[ParsedLabel]:
+) -> list[ParsedLabel] | list[DatedLabel]:
     """
     Extracts structured data from an uploaded image of a label.
     """
@@ -116,19 +140,27 @@ async def extract_label(
 
     contents = await file.read()
 
+    schema = (TypeAdapter(list[DatedLabel]).json_schema() if include_date else
+              TypeAdapter(list[ParsedLabel]).json_schema())
+
+    prompt = get_model_prompt(
+        user_desc=label_desc or "handwritten labels on blue painter's tape",
+        include_date=include_date
+    )
+
     try:
         response = ollama_client.chat(
             model=model_name or DEFAULT_MODEL,
-            format=TypeAdapter(list[ParsedLabel]).json_schema(),
+            format=schema,
             messages=[{
                 'role': 'user',
-                'content': get_model_prompt(),
+                'content': prompt,
                 'images': [contents]
             }]
         )
         response_text = response['message']['content']
 
-        return [ParsedLabel(**item)
+        return [DatedLabel(**item) if include_date else ParsedLabel(**item)
                 for item in json.loads(response_text)]
     except OllamaResponseError as e:
         if e.status_code == 404:

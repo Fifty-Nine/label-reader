@@ -26,10 +26,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ParsedLabel"
-                  },
-                  "type": "array",
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/ParsedLabel"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/DatedLabel"
+                      },
+                      "type": "array"
+                    }
+                  ],
                   "title": "Response Extract Label Api Extract Post"
                 }
               }
@@ -100,6 +110,22 @@
             ],
             "title": "Model Name"
           },
+          "label_desc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Desc"
+          },
+          "include_date": {
+            "type": "boolean",
+            "title": "Include Date",
+            "default": false
+          },
           "file": {
             "type": "string",
             "contentMediaType": "application/octet-stream",
@@ -111,6 +137,34 @@
           "file"
         ],
         "title": "Body_extract_label_api_extract_post"
+      },
+      "DatedLabel": {
+        "properties": {
+          "visual_evidence": {
+            "type": "string",
+            "title": "Visual Evidence",
+            "description": "Briefly describes the physical material and style of the label. This should include details about the label itself (e.g. blue painter's tape with black marker, white label with black machine-printed text, etc.)"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "The text from the label."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}",
+            "title": "Date",
+            "description": "The date printed on the label. MUST be in ISO 8601 YYYY-MM-DD format."
+          }
+        },
+        "type": "object",
+        "required": [
+          "visual_evidence",
+          "text",
+          "date"
+        ],
+        "title": "DatedLabel",
+        "description": "Represents a label parsed from an image that includes an\nexplicit date field."
       },
       "HTTPValidationError": {
         "properties": {

@@ -28,9 +28,9 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 
 ## Phase 3: Advanced Configuration & UI Polish
 
-1.  **Backend:** Update the `/api/extract` Pydantic model to accept `label_desc` and `include_date` fields.
-2.  **Backend:** Implement the `get_prompt` logic to dynamically generate the VLM prompt based on these new parameters.
-3.  **Backend:** Write unit tests for the prompt generation logic to ensure it behaves as expected.
+**DONE** 1.  **Backend:** Update the `/api/extract` Pydantic model to accept `label_desc` and `include_date` fields.
+**DONE** 2.  **Backend:** Implement the `get_prompt` logic to dynamically generate the VLM prompt based on these new parameters.
+**DONE** 3.  **Backend:** Write unit tests for the prompt generation logic to ensure it behaves as expected.
 4.  **Frontend:** Add a text input for "Label Description" and a checkbox for "Extract Dates".
 5.  **Frontend:** Pass these new configuration values in the request to `/api/extract`.
 6.  **Frontend:** Instead of displaying raw JSON, parse the response and render the results in a user-friendly HTML table. Add a clear loading indicator that displays while waiting for the API.

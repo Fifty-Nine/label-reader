@@ -37,6 +37,36 @@ def test_extract_label_success(mocker):
     mock_chat.assert_called_once()
 
 
+def test_extract_label_with_date_success(mocker):
+    """
+    Test successful extraction of a label image including a date.
+    """
+    response_obj = {"visual_evidence": "description of the label",
+                    "text": "extracted label text.",
+                    "date": "2026-01-01"}
+    mock_chat = mocker.patch("app.main.ollama_client.chat")
+    mock_chat.return_value = {
+        'message': {
+            'content': json.dumps([response_obj])
+        }
+    }
+
+    # Create a dummy image file
+    file_content = b"fake image content"
+    files = {"file": ("test.png", file_content, "image/png")}
+
+    # Send the request
+    response = client.post("/api/extract",
+                           data={"model_name": "qwen3.5:9b",
+                                 "include_date": True},
+                           files=files)
+
+    # Assertions
+    assert response.status_code == 200
+    assert response.json() == [response_obj]
+    mock_chat.assert_called_once()
+
+
 def test_extract_label_success_default_model(mocker):
     """
     Test successful extraction of a label image.
