@@ -1,11 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const selectedFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const isSubmitting = ref(false)
 const errorMessage = ref<string | null>(null)
-const rawResult = ref<any>(null)
+const rawResult = ref<unknown>(null)
+
+const models = ref<string[]>([])
+const selectedModel = ref<string | null>(null)
+const isLoadingModels = ref(false)
+
+onMounted(async () => {
+  isLoadingModels.value = true
+  try {
+    const response = await fetch('/api/models')
+    if (!response.ok) {
+      throw new Error(`Failed to fetch models: ${response.statusText}`)
+    }
+    const data = await response.json()
+    models.value = data.models || []
+    if (models.value.length > 0) {
+      selectedModel.value = models.value[0] || null
+    }
+  } catch (error) {
+    console.error('Error fetching models:', error)
+  } finally {
+    isLoadingModels.value = false
+  }
+})
 
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -34,6 +57,9 @@ const handleSubmit = async () => {
   try {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
+    if (selectedModel.value) {
+      formData.append('model_name', selectedModel.value)
+    }
 
     const response = await fetch('/api/extract', {
       method: 'POST',
@@ -48,9 +74,9 @@ const handleSubmit = async () => {
     const data = await response.json()
     console.log('Extraction Result:', data)
     rawResult.value = data
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error submitting file:', error)
-    errorMessage.value = error.message || 'An unexpected error occurred.'
+    errorMessage.value = error instanceof Error ? error.message : 'An unexpected error occurred.'
   } finally {
     isSubmitting.value = false
   }
@@ -63,16 +89,36 @@ const handleSubmit = async () => {
 
     <form @submit.prevent="handleSubmit" class="upload-form">
       <div class="form-group">
+        <label>Select AI Model</label>
+        <div class="select-wrapper">
+          <select
+            v-model="selectedModel"
+            :disabled="isLoadingModels || models.length === 0"
+            class="form-select"
+          >
+            <option v-if="isLoadingModels" value="" disabled>Loading models...</option>
+            <option v-else-if="models.length === 0" value="" disabled>No models available</option>
+            <option v-for="model in models" :key="model" :value="model">{{ model }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label>Select Label Image (JPG)</label>
         <div class="file-input-wrapper">
-          <input 
-            type="file" 
-            accept="image/*" 
-            @change="handleFileChange" 
+          <input
+            type="file"
+            accept="image/*"
+            @change="handleFileChange"
             ref="fileInput"
             class="hidden-input"
           />
-          <button type="button" class="btn-choose" @click="triggerFileInput" :disabled="isSubmitting">
+          <button
+            type="button"
+            class="btn-choose"
+            @click="triggerFileInput"
+            :disabled="isSubmitting"
+          >
             Choose File
           </button>
           <span class="file-name">
@@ -146,6 +192,37 @@ pre {
   display: block;
   margin-bottom: 0.5rem;
   color: var(--color-text);
+  font-weight: 500;
+}
+
+.select-wrapper {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-background-soft);
+}
+
+.form-select {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  appearance: auto;
+  outline: none;
+}
+
+.form-select option {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.form-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .file-input-wrapper {

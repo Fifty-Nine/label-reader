@@ -22,9 +22,9 @@ This document outlines the step-by-step implementation plan for rebuilding the L
 **DONE** 1.  **Backend:** Implement the `GET /api/models` endpoint that uses the `ollama.Client` to fetch available models.
 **DONE** 2.  **Backend:** Update the `/api/extract` endpoint to accept a `model_name` field in its Pydantic model. Use this value instead of the hardcoded one.
 **DONE** 3.  **Backend:** Add/update unit tests for the `/api/models` endpoint and the modified `/api/extract` endpoint.
-4.  **Frontend:** On application load, call the `/api/models` endpoint to fetch the list of available models.
-5.  **Frontend:** Add a `<select>` dropdown to the UI and populate it with the fetched models.
-6.  **Frontend:** Update the submit logic to include the currently selected model name in the request to `/api/extract`.
+**DONE** 4.  **Frontend:** On application load, call the `/api/models` endpoint to fetch the list of available models.
+**DONE** 5.  **Frontend:** Add a `<select>` dropdown to the UI and populate it with the fetched models.
+**DONE** 6.  **Frontend:** Update the submit logic to include the currently selected model name in the request to `/api/extract`.
 
 ## Phase 3: Advanced Configuration & UI Polish
 
