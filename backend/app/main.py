@@ -25,7 +25,7 @@ app = FastAPI(title="Label Reader API")
 # fallback to the dev instance from GEMINI.md
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = os.getenv("OLLAMA_DEFAULT_MODEL", "qwen3.5:9b")
-DEBUG = os.getenv("DEBUG", '1') == '1'
+DEBUG = os.getenv("DEBUG") == '1'
 ollama_client = Client(host=OLLAMA_HOST)
 
 # Configuration for static files (frontend)

@@ -145,7 +145,7 @@ def test_extract_label_transport_error(mocker):
                            files=files)
 
     assert response.status_code == 500
-    assert "Connection refused" in response.json()["detail"]
+    assert response.json()["detail"] == "Internal Server Error"
 
 
 def test_extract_label_non_structured_data(mocker):
@@ -225,4 +225,4 @@ def test_get_models_transport_error(mocker):
     response = client.get("/api/models")
 
     assert response.status_code == 500
-    assert "Connection refused" in response.json()["detail"]
+    assert response.json()["detail"] == "Internal Server Error"
