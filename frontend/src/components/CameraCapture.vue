@@ -14,11 +14,14 @@ const capturedImageUrl = ref<string | null>(null)
 
 const startCamera = async () => {
   try {
+    if (!window.isSecureContext) {
+      throw new Error('Camera access requires a secure context (HTTPS or localhost).')
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Camera API not supported in this browser context.')
     }
     cameraStream.value = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
+      video: { facingMode: { ideal: 'environment' } },
     })
     if (videoElement.value) {
       videoElement.value.srcObject = cameraStream.value
