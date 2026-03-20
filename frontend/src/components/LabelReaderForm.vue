@@ -36,6 +36,7 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Error fetching models:', error)
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load AI models.'
   } finally {
     isLoadingModels.value = false
   }
