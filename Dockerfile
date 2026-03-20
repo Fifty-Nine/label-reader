@@ -16,7 +16,7 @@ FROM python:3.11-slim
 WORKDIR /app/backend
 
 # Install poetry
-RUN pip install poetry
+RUN pip install poetry==2.3.2
 
 # Copy backend dependency files
 COPY backend/pyproject.toml backend/poetry.lock ./
