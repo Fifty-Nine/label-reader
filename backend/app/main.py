@@ -25,6 +25,7 @@ app = FastAPI(title="Label Reader API")
 # fallback to the dev instance from GEMINI.md
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "https://ollama.home.trprince.com")
 DEFAULT_MODEL = os.getenv("OLLAMA_DEFAULT_MODEL", "qwen3.5:9b")
+DEBUG = os.getenv("DEBUG", '1') == '1'
 ollama_client = Client(host=OLLAMA_HOST)
 
 # Configuration for static files (frontend)
@@ -53,14 +54,15 @@ def filter_unsupported_keys(schema: Any) -> Any:
 def custom_exception_handler(_request: Request, ex: Exception):
     """Handle arbitrary exceptions thrown by handlers."""
     # Print the exception backtrace to the server log
-    traceback.print_exception(type(ex), ex, ex.__traceback__)
-
     tb = '\n'.join(traceback.format_exception(type(ex),
                                               ex,
                                               ex.__traceback__))
+
+    print(tb)
+
     return JSONResponse(
         status_code=500,
-        content={'detail': f"Internal Server Error: {tb}"}
+        content={'detail': "Internal Server Error" + (tb if DEBUG else "")}
     )
 
 
@@ -156,7 +158,7 @@ def model_response_error(e: Exception, response_text: str) -> NoReturn:
     raise HTTPException(
         status_code=500,
         detail='Model returned data that did not match the schema. '
-               f'Model response: "{response_text!r}"'
+               + (f'Model response: "{response_text!r}"' if DEBUG else '')
     ) from e
 
 

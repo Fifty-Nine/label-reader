@@ -41,6 +41,7 @@ COPY --from=frontend-builder /app/frontend/dist/ ./static/
 # OLLAMA_HOST can be overridden at runtime
 ENV OLLAMA_HOST=https://ollama.home.trprince.com
 ENV STATIC_DIR=static
+ENV DEBUG=0
 
 # Expose port 8000
 EXPOSE 8000
