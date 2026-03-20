@@ -9,7 +9,7 @@ repos:
             language: system
             types: [python]
             files: ^backend/
-            entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && export PYLINTHOME=$(pwd)/../.pylint.d && export MYPY_CACHE_DIR=$(pwd)/../.mypy_cache && tool=$1; shift; ../.venv/bin/poetry run $tool "${@#backend/}"' --
+            entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.cache/poetry/config && export POETRY_CACHE_DIR=$(pwd)/../.cache/poetry/cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && export PYLINTHOME=$(pwd)/../.cache/pylint.d && export MYPY_CACHE_DIR=$(pwd)/../.cache/mypy/cache && tool=$1; shift; ../.venv/bin/poetry run $tool "${@#backend/}"' --
         args: [flake8]
     -   id: pylint
         name: pylint
