@@ -11,8 +11,8 @@
     "type-check": "vue-tsc --build",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint:eslint": "eslint . --fix --cache --cache-location ../.cache/eslint/.eslintcache",
+    "format": "prettier --write --experimental-cli --cache-location ../.cache/prettier/.prettiercache src/"
   },
   "dependencies": {
     "vue": "^3.5.29",
