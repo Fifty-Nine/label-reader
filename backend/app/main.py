@@ -1,8 +1,9 @@
 """
 Main module for the Label Reader backend API.
 """
-import os
 import json
+import logging
+import os
 import textwrap
 import traceback
 from datetime import date
@@ -58,7 +59,7 @@ def custom_exception_handler(_request: Request, ex: Exception):
                                               ex,
                                               ex.__traceback__))
 
-    print(tb)
+    logging.error(tb)
 
     return JSONResponse(
         status_code=500,
