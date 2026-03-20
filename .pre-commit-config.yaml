@@ -29,3 +29,19 @@ repos:
         <<: *poetry_run
         args: [python, regen_schema.py]
         pass_filenames: false
+    -   id: frontend-format
+        name: frontend format
+        <<: &npm_run
+            language: system
+            files: ^frontend/
+            entry: bash -c 'cd frontend && command=$1; shift; npm run $command' --
+            pass_filenames: false
+        args: [format]
+    -   id: frontend-lint
+        name: frontend lint
+        <<: *npm_run
+        args: [lint]
+    -   id: frontend-type-check
+        name: frontend type-check
+        <<: *npm_run
+        args: [type-check]
