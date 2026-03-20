@@ -34,7 +34,7 @@ COPY --from=frontend-builder /app/frontend/dist/ ./static/
 
 # Environment variables
 # OLLAMA_HOST can be overridden at runtime
-ENV OLLAMA_HOST=https://ollama.home.trprince.com
+ENV OLLAMA_HOST=http://127.0.0.1:11434
 ENV STATIC_DIR=static
 ENV DEBUG=0
 
