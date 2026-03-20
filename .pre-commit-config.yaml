@@ -1,35 +1,31 @@
+default_stages: [pre-commit]
+
 repos:
 -   repo: local
     hooks:
     -   id: flake8
         name: flake8
-        entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && ../.venv/bin/poetry run flake8 "${@#backend/}"' --
-        language: system
-        types: [python]
-        files: ^backend/
+        <<: &poetry_run
+            language: system
+            types: [python]
+            files: ^backend/
+            entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && export PYLINTHOME=$(pwd)/../.pylint.d && export MYPY_CACHE_DIR=$(pwd)/../.mypy_cache && tool=$1; shift; ../.venv/bin/poetry run $tool "${@#backend/}"' --
+        args: [flake8]
     -   id: pylint
         name: pylint
-        entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && export PYLINTHOME=$(pwd)/../.pylint.d && ../.venv/bin/poetry run pylint "${@#backend/}"' --
-        language: system
-        types: [python]
-        files: ^backend/
+        <<: *poetry_run
+        args: [pylint]
     -   id: mypy
         name: mypy
-        entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && export MYPY_CACHE_DIR=$(pwd)/../.mypy_cache && ../.venv/bin/poetry run mypy "${@#backend/}"' --
-        language: system
-        types: [python]
-        files: ^backend/
+        <<: *poetry_run
+        args: [mypy]
     -   id: pytest
         name: pytest
-        entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && ../.venv/bin/poetry run pytest'
-        language: system
-        types: [python]
-        files: ^backend/
+        <<: *poetry_run
+        args: [pytest]
         pass_filenames: false
     -   id: generate-openapi-schema
         name: Generate backend OpenAPI schema
-        entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.poetry_config && export POETRY_CACHE_DIR=$(pwd)/../.poetry_cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && ../.venv/bin/poetry run python regen_schema.py'
-        language: system
-        types: [python]
-        files: ^backend/
+        <<: *poetry_run
+        args: [python, regen_schema.py]
         pass_filenames: false
