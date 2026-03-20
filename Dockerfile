@@ -15,11 +15,6 @@ RUN npm run build
 FROM python:3.11-slim
 WORKDIR /app/backend
 
-# Install system dependencies (needed for poetry)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install poetry
 RUN pip install poetry
 
