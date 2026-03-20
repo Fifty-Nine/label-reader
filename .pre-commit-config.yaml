@@ -29,3 +29,32 @@ repos:
         <<: *poetry_run
         args: [python, regen_schema.py]
         pass_filenames: false
+    -   id: frontend-format
+        name: frontend format
+        <<: &npm_run
+            language: system
+            files: ^frontend/
+            entry: bash -c 'cd frontend && npm run $@' --
+            pass_filenames: false
+        args: [format]
+    -   id: frontend-lint
+        name: frontend lint
+        <<: *npm_run
+        args: [lint]
+    -   id: frontend-type-check
+        name: frontend type-check
+        <<: *npm_run
+        args: [type-check]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: mixed-line-ending
+    -   id: requirements-txt-fixer
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-case-conflict
+-   repo: https://github.com/pycqa/isort
+    rev: 8.0.1
+    hooks:
+    -   id: isort
+        name: isort (python)
