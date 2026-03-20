@@ -34,7 +34,7 @@ repos:
         <<: &npm_run
             language: system
             files: ^frontend/
-            entry: bash -c 'cd frontend && command=$1; shift; npm run $command' --
+            entry: bash -c 'cd frontend && npm run $@' --
             pass_filenames: false
         args: [format]
     -   id: frontend-lint
