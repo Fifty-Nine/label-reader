@@ -90,4 +90,3 @@ This repository is divided into two main components:
 For detailed requirements, constraints, and use cases, please review the project documentation:
 - **`DESIGN.md`**: Core architectural requirements, functional use-cases, and implementation constraints.
 - **`GEMINI.md`**: Specific mandates for AI-assisted development, including sandboxed environment cache configurations for tools like `poetry` and `pre-commit`.
-- **`IDEAS.md`**: Future project goals and potential enhancements.
