@@ -45,3 +45,16 @@ repos:
         name: frontend type-check
         <<: *npm_run
         args: [type-check]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: mixed-line-ending
+    -   id: requirements-txt-fixer
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-case-conflict
+-   repo: https://github.com/pycqa/isort
+    rev: 8.0.1
+    hooks:
+    -   id: isort
+        name: isort (python)
