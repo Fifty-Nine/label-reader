@@ -95,12 +95,11 @@ dated_label_schema = filter_unsupported_keys(
 )
 
 
-def get_model_prompt(user_desc: str = "handwritten labels on blue "
+def get_model_prompt(schema: dict,
+                     user_desc: str = "handwritten labels on blue "
                                       "painter's tape",
                      include_date: bool = False) -> str:
     """Get the prompt for the model."""
-    schema = DatedLabel if include_date else ParsedLabel
-
     date_instructions = textwrap.dedent(f"""
         In the event that a date is ambiguous (e.g. 03-04-11 could be
         March 4th 2011, April 3rd 2011, or even April 11 2003) you should
@@ -129,7 +128,7 @@ def get_model_prompt(user_desc: str = "handwritten labels on blue "
 
         You must return a JSON array matching this JSON Schema specification:
         <schema>
-        {json.dumps(schema.model_json_schema())}
+        {json.dumps(schema)}
         </schema>
 
         You MUST return a valid array even if there are zero or one labeled
@@ -181,6 +180,7 @@ async def extract_label(
     schema = (dated_label_schema if include_date else parsed_label_schema)
 
     prompt = get_model_prompt(
+        schema,
         user_desc=label_desc or "handwritten labels on blue painter's tape",
         include_date=include_date
     )
