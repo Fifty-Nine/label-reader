@@ -1,0 +1,264 @@
+"""
+Main module for the Label Reader backend API.
+"""
+import json
+import logging
+import os
+import textwrap
+import traceback
+from datetime import date
+from typing import Annotated, Any, NoReturn
+
+from fastapi import (FastAPI,
+                     File,
+                     Form,
+                     HTTPException,
+                     Request,
+                     UploadFile)
+from fastapi.responses import (FileResponse,
+                               JSONResponse)
+from ollama import Client, ResponseError as OllamaResponseError
+from pydantic import BaseModel, Field, TypeAdapter
+
+app = FastAPI(title="Label Reader API")
+
+# Use environment variable for Ollama host,
+# fallback to the dev instance from GEMINI.md
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+DEFAULT_MODEL = os.getenv("OLLAMA_DEFAULT_MODEL", "qwen3.5:9b")
+DEBUG = os.getenv("DEBUG") == '1'
+ollama_client = Client(host=OLLAMA_HOST)
+
+# Configuration for static files (frontend)
+STATIC_DIR = os.getenv("STATIC_DIR", "static")
+
+
+def filter_unsupported_keys(schema: Any) -> Any:
+    """
+    Filters out attributes that the ollama schema functionality does not
+    support.
+    """
+    if isinstance(schema, dict):
+        return {
+            key: filter_unsupported_keys(value)
+            for key, value in schema.items()
+            if key != "pattern"
+        }
+
+    if isinstance(schema, list):
+        return [filter_unsupported_keys(item) for item in schema]
+
+    return schema
+
+
+@app.exception_handler(Exception)
+def custom_exception_handler(_request: Request, ex: Exception):
+    """Handle arbitrary exceptions thrown by handlers."""
+    # Print the exception backtrace to the server log
+    tb = '\n'.join(traceback.format_exception(type(ex),
+                                              ex,
+                                              ex.__traceback__))
+
+    logging.error(tb)
+
+    return JSONResponse(
+        status_code=500,
+        content={'detail': "Internal Server Error" + (tb if DEBUG else "")}
+    )
+
+
+class ParsedLabel(BaseModel):
+    """Represents a label parsed from an image."""
+    visual_evidence: str = Field(
+            description="Briefly describes the physical material and style "
+                        "of the label. This should include details about the "
+                        "label itself (e.g. blue painter's tape with "
+                        "black marker, white label with black machine-printed "
+                        "text, etc.)")
+    item: str = Field(description="The description of the item "
+                                  "from the label.")
+
+
+class DatedLabel(ParsedLabel):
+    """Represents a label parsed from an image that includes an
+    explicit date field."""
+    date: str = Field(description="The date printed on the label. MUST be in "
+                                  "ISO 8601 YYYY-MM-DD format.",
+                      pattern=r"^\d{4}-\d{2}-\d{2}")
+
+
+parsed_label_schema = filter_unsupported_keys(
+        TypeAdapter(list[ParsedLabel]).json_schema()
+)
+dated_label_schema = filter_unsupported_keys(
+        TypeAdapter(list[DatedLabel]).json_schema()
+)
+
+
+def get_model_prompt(schema: dict,
+                     user_desc: str = "handwritten labels on blue "
+                                      "painter's tape",
+                     include_date: bool = False) -> str:
+    """Get the prompt for the model."""
+    date_instructions = textwrap.dedent(f"""
+        In the event that a date is ambiguous (e.g. 03-04-11 could be
+        March 4th 2011, April 3rd 2011, or even April 11 2003) you should
+        assume the date is in M-D-Y format. DO NOT include the date in
+        the label text.
+
+        Today's date is {date.today().isoformat()}.""")
+
+    return textwrap.dedent(f"""
+        You are an automated OCR system. Your sole function is to read
+        labels on items from the provided image. You should extract only the
+        text of the labeled items.
+
+        TARGET LABEL VISUAL DESCRIPTION:
+        {user_desc}
+
+        CRITICAL RULES:
+        1. ONLY extract text that matches the TARGET LABEL VISUAL DESCRIPTION.
+        2. IGNORE all commercial pre-printed text, manufacturer
+           branding, or logos on the tape/sticker material itself (e.g., faint
+           pre-printed branding codes.
+        3. IGNORE text embossed into text, plastic, metal or other materials.
+        4. If there are multiple items with labels matching the TARGET LABEL
+           VISUAL description and the labels are identical, you should include
+           one entry for each duplicated item.
+
+        You must return a JSON array matching this JSON Schema specification:
+        <schema>
+        {json.dumps(schema)}
+        </schema>
+
+        You MUST return a valid array even if there are zero or one labeled
+        items.
+
+        In some cases, you may encounter labels with multiple layers of text,
+        e.g. a handwritten label on top of commercially printed text. In these
+        cases you MUST only record the text maching the TARGET LABEL VISUAL
+        DESCRIPTION and IGNORE any text that does not match.
+
+        {date_instructions if include_date else ''}
+
+        CRITICAL INSTRUCTION: Do NOT output the schema definition keys
+        (such as 'properties', 'type', 'title', or 'description') in your
+        final JSON. Your output must contain only the actual extracted
+        data keys defined within the schema.
+
+        CRITICAL INSTRUCTION: If you find you are unable to interpret labels
+        presented to you, DO NOT attempt to guess or over-analyze. Instead,
+        omit those labels from your result and continue.
+        """)
+
+
+def model_response_error(e: Exception, response_text: str) -> NoReturn:
+    """Raise an error indicating a mismatch between the model's response
+    and the schema expectations."""
+    raise HTTPException(
+        status_code=500,
+        detail='Model returned data that did not match the schema. '
+               + (f'Model response: "{response_text!r}"' if DEBUG else '')
+    ) from e
+
+
+@app.post("/api/extract")
+async def extract_label(
+    model_name: Annotated[str | None, Form()] = None,
+    label_desc: Annotated[str | None, Form()] = None,
+    include_date: Annotated[bool, Form()] = False,
+    file: UploadFile = File(...)
+) -> list[ParsedLabel] | list[DatedLabel]:
+    """
+    Extracts structured data from an uploaded image of a label.
+    """
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    contents = await file.read()
+
+    schema = (dated_label_schema if include_date else parsed_label_schema)
+
+    prompt = get_model_prompt(
+        schema,
+        user_desc=label_desc or "handwritten labels on blue painter's tape",
+        include_date=include_date
+    )
+
+    try:
+        response = ollama_client.chat(
+            model=model_name or DEFAULT_MODEL,
+            format=schema,
+            messages=[{
+                'role': 'user',
+                'content': prompt,
+                'images': [contents]
+            }],
+            options={'temperature': 0.1,
+                     'keep_alive': '30m'}
+        )
+        response_text = response['message']['content']
+
+        return [DatedLabel(**item) if include_date else ParsedLabel(**item)
+                for item in json.loads(response_text)]
+    except OllamaResponseError as e:
+        if e.status_code == 404:
+            raise HTTPException(
+                status_code=400,
+                detail='Model not found on Ollama instance.') from e
+        raise e
+    except json.decoder.JSONDecodeError as e:
+        model_response_error(e, response_text)
+    except TypeError as e:
+        model_response_error(e, response_text)
+
+
+class ModelList(BaseModel):
+    """List of models returned from the API."""
+    models: list[str] = Field(description='The list of models supported '
+                                          'by the server.')
+    default: str | None = Field(default=None,
+                                description='The preferred default model.')
+
+
+@app.get("/api/models")
+def get_models() -> ModelList:
+    """
+    Gets the list of available models from Ollama.
+    """
+    models = [m['model'] for m in ollama_client.list()['models']]
+
+    return ModelList(models=models, default=DEFAULT_MODEL)
+
+
+# SPA Fallback and Static File Serving
+# These must be added AFTER the API routes to avoid overshadowing them.
+if os.path.exists(STATIC_DIR):
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """
+        Serves static files and provides a fallback for SPA routing.
+        """
+        # Exclude /api routes from being caught here (just in case)
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="API route not found")
+
+        # Check if the requested file exists in the static directory
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+
+        # Fallback to index.html for SPA routing (e.g. /about)
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index_path):
+            return FileResponse(index_path)
+
+        raise HTTPException(status_code=404, detail="File not found")
+else:
+    # If static dir doesn't exist (e.g. during dev without built frontend)
+    @app.get("/")
+    async def root():
+        """
+        Root endpoint fallback when frontend is not built.
+        """
+        return {"message": "Label Reader API is running. Frontend not found."}

@@ -1,0 +1,31 @@
+default_stages: [pre-commit]
+
+repos:
+-   repo: local
+    hooks:
+    -   id: flake8
+        name: flake8
+        <<: &poetry_run
+            language: system
+            types: [python]
+            files: ^backend/
+            entry: bash -c 'cd backend && export POETRY_CONFIG_DIR=$(pwd)/../.cache/poetry/config && export POETRY_CACHE_DIR=$(pwd)/../.cache/poetry/cache && export POETRY_VIRTUALENVS_IN_PROJECT=true && export PYLINTHOME=$(pwd)/../.cache/pylint.d && export MYPY_CACHE_DIR=$(pwd)/../.cache/mypy/cache && tool=$1; shift; ../.venv/bin/poetry run $tool "${@#backend/}"' --
+        args: [flake8]
+    -   id: pylint
+        name: pylint
+        <<: *poetry_run
+        args: [pylint]
+    -   id: mypy
+        name: mypy
+        <<: *poetry_run
+        args: [mypy]
+    -   id: pytest
+        name: pytest
+        <<: *poetry_run
+        args: [pytest]
+        pass_filenames: false
+    -   id: generate-openapi-schema
+        name: Generate backend OpenAPI schema
+        <<: *poetry_run
+        args: [python, regen_schema.py]
+        pass_filenames: false
